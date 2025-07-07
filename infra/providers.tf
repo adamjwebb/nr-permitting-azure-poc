@@ -1,12 +1,7 @@
 terraform {
   required_version = ">= 1.9.0"
 
-  /*   backend "azurerm" {
-    resource_group_name  = "tfstate"
-    storage_account_name = "tfstateawebb"
-    container_name       = "tfstate"
-    key                  = "terraform.tfstate.nr-permitting-azure-poc"
-  } */
+  backend "local" {}
 
   required_providers {
     azurerm = {
@@ -25,7 +20,5 @@ terraform {
 }
 provider "azurerm" {
   use_oidc = true
-  features {
-  }
-  subscription_id = var.subscription_id
+  features {}
 }
