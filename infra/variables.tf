@@ -1,3 +1,8 @@
+variable "subscription_id" {
+  description = "(Required) The Azure Subscription ID where the self-hosted runners will be deployed."
+  type        = string
+}
+
 variable "resource_group_location" {
   type        = string
   default     = "canadacentral"
@@ -6,80 +11,161 @@ variable "resource_group_location" {
 
 variable "resource_group_name" {
   type        = string
-  default     = "b9cee3-test-networking"
   description = "Name of the resource group."
 }
 
-variable "vnet_name" {
+// network variables
+
+variable "existing_virtual_network_resource_group_name" {
   type        = string
-  default     = "b9cee3-test-vwan-spoke"
-  description = "Existing vnet name."
+  description = "Resource group name of the existing virtual network."
+}
+
+variable "existing_virtual_network_name" {
+  type        = string
+  description = "Name of the existing virtual network."
 }
 
 variable "apim_subnet_prefix" {
   type        = string
-  default     = "10.46.8.0/26"
   description = "The address prefix for the API Management subnet."
 }
 
-variable "container_apps_subnet_prefix" {
+variable "app_service_subnet_prefix" {
   type        = string
-  default     = "10.46.8.64/26"
-  description = "The address prefix for the Container Apps subnet."
+  description = "The address prefix for the App Service subnet."
 }
 
 variable "privateendpoint_subnet_prefix" {
   type        = string
-  default     = "10.46.8.128/26"
   description = "The address prefix for the Private Endpoint subnet."
 }
 
-variable "apim_virtual_network_type" {
-  description = "The virtual network type of the API Management service"
-  default     = "External"
+// app service variables
+
+variable "appserviceplan_sku_name" {
   type        = string
+  default     = "P0v3"
+  description = "The SKU name for the App Service Plan."
+}
+
+variable "appserviceplan_zone_redundant" {
+  type        = bool
+  default     = false
+  description = "Whether the App Service Plan is zone redundant."
+}
+
+variable "appserviceplan_premium_auto_scale_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the App Service Plan has premium auto-scaling enabled."
+}
+
+variable "appserviceplan_worker_count" {
+  type        = number
+  default     = 1
+  description = "The number of workers for the App Service Plan."
+}
+
+variable "docker_registry_url" {
+  type        = string
+  description = "The URL of the Docker registry."
+  default     = "https://mcr.microsoft.com"
+}
+
+variable "docker_image_name" {
+  type        = string
+  description = "The name of the Docker image."
+  default     = "appsvc/staticsite:latest"
+}
+
+// api management variables
+
+variable "apim_publisher_email" {
+  type        = string
+  default     = "test@contoso.com"
+  description = "The email address of the owner of the API Management service."
+}
+
+variable "apim_publisher_name" {
+  type        = string
+  default     = "Contoso"
+  description = "The name of the owner of the API Management service."
+}
+
+variable "apim_sku_name" {
+  type        = string
+  description = "The pricing tier of the API Management service."
+  default     = "Developer_1" # Default to Developer_1 tier
+  validation {
+    condition     = contains(["Developer_1", "Standard_1", "Premium_1"], var.apim_sku_name)
+    error_message = "The sku_name must be one of the following: Developer_1, Standard_1, Premium_1."
+  }
+}
+
+variable "apim_virtual_network_type" {
+  type        = string
+  default     = "External"
+  description = "The virtual network type of the API Management service."
   validation {
     condition     = contains(["External", "Internal", "None"], var.apim_virtual_network_type)
     error_message = "The virtual network type must be one of the following: External, Internal, None."
   }
 }
 
-variable "publisher_email" {
-  default     = "test@contoso.com"
-  description = "The email address of the owner of the service"
+variable "api_name" {
   type        = string
-  validation {
-    condition     = length(var.publisher_email) > 0
-    error_message = "The publisher_email must contain at least one character."
-  }
+  description = "The name of the API in API Management."
+  default     = "nr-permitting-api"
 }
 
-variable "publisher_name" {
-  default     = "publisher"
-  description = "The name of the owner of the service"
+variable "api_display_name" {
   type        = string
-  validation {
-    condition     = length(var.publisher_name) > 0
-    error_message = "The publisher_name must contain at least one character."
-  }
+  description = "The display name of the API in API Management."
+  default     = "NR Permitting API"
 }
 
-variable "sku" {
-  description = "The pricing tier of this API Management service"
-  default     = "Developer"
+variable "api_path" {
   type        = string
-  validation {
-    condition     = contains(["Developer", "Standard", "Premium"], var.sku)
-    error_message = "The sku must be one of the following: Developer, Standard, Premium."
-  }
+  description = "The path for the API in API Management."
+  default     = "nr-permitting"
 }
 
-variable "sku_count" {
-  description = "The instance size of this API Management service."
-  default     = 1
+variable "api_revision" {
+  type        = string
+  description = "The revision of the API in API Management."
+  default     = "1"
+}
+
+// PostgreSQL variables
+
+variable "postgresql_admin_username" {
+  type        = string
+  default     = "pgsqladmin"
+  description = "The administrator username for the PostgreSQL server."
+  
+}
+
+variable "postgresql_version" {
+  type        = string
+  default     = "16"
+  description = "The version of PostgreSQL to use."
+}
+
+variable "postgresql_sku_name" {
+  type        = string
+  default     = "B_Standard_B1ms"
+  description = "The SKU name for the PostgreSQL server."
+}
+
+variable "postgresql_port" {
   type        = number
-  validation {
-    condition     = contains([1, 2], var.sku_count)
-    error_message = "The sku_count must be one of the following: 1, 2."
-  }
+  default     = 5432
+  description = "The port for the PostgreSQL server."
+}
+
+variable "postgresql_database_name" {
+  type        = string
+  default     = "nr_permitting_db"
+  description = "The name of the PostgreSQL database."
 }
