@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - app_service
     paths:
       - 'infra/**'
       - '.github/workflows/infrastructure.yml'
