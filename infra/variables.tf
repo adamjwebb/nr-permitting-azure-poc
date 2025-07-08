@@ -1,3 +1,12 @@
+variable "tenant_id" {
+  description = "The Azure Active Directory tenant ID for OIDC authentication."
+  type        = string
+}
+
+variable "client_id" {
+  description = "The client ID of the Azure AD application for OIDC authentication."
+  type        = string
+}
 variable "subscription_id" {
   description = "(Required) The Azure Subscription ID where the self-hosted runners will be deployed."
   type        = string
