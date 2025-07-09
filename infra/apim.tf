@@ -20,7 +20,7 @@ module "apim" {
   }
 }
 
-resource "azurerm_api_management_api" "nr-permitting-api" {
+/* resource "azurerm_api_management_api" "nr-permitting-api" {
   name                  = var.api_name
   api_management_name   = module.apim.name
   resource_group_name   = data.azurerm_resource_group.rg.name
@@ -30,4 +30,5 @@ resource "azurerm_api_management_api" "nr-permitting-api" {
   protocols             = ["https"]
   service_url           = "https://${module.webapp.resource_uri}.azurewebsites.net"
   subscription_required = false
-}
+} */
+

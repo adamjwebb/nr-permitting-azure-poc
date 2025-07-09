@@ -1,0 +1,47 @@
+# Configure Azure App Service Easy Auth (Entra ID) and APIM Managed Identity Authentication
+#
+# This file adds:
+# - azurerm_app_service (for web app) auth_settings_v2 block for Entra ID (Easy Auth)
+# - azurerm_user_assigned_identity for APIM (if not already present)
+# - Output for web app's App ID URI for APIM to use as audience
+#
+# NOTE: You must register your App Service as an App Registration in Entra ID and grant the APIM managed identity access to it (as an app role or API permission).
+
+resource "azurerm_app_service_auth_settings_v2" "webapp_auth" {
+  name                = module.webapp.name
+  resource_group_name = data.azurerm_resource_group.rg.name
+  app_service_name    = module.webapp.name
+
+  # Enable authentication
+  enabled = true
+  # Require authentication for all requests
+  unauthenticated_action = "RedirectToLoginPage"
+
+  # Configure Entra ID (Azure AD) as the identity provider
+  azure_active_directory {
+    # These must be set to your App Registration values
+    client_id     = var.webapp_aad_client_id
+    tenant_auth_endpoint = "https://login.microsoftonline.com/${data.azurerm_client_config.current.tenant_id}/v2.0"
+    # Optionally, set client_secret if using confidential client
+    # client_secret_setting_name = "AAD_CLIENT_SECRET"
+    # Use App ID URI as audience for APIM
+    allowed_audiences = [var.webapp_aad_app_id_uri]
+  }
+
+  # Optionally, configure allowed external redirects, token store, etc.
+  # token_store_enabled = true
+}
+
+# Output the App ID URI for use in APIM
+output "webapp_aad_app_id_uri" {
+  value = var.webapp_aad_app_id_uri
+  description = "The App ID URI of the web app for use as audience in APIM."
+}
+
+# You must also:
+# 1. Register the App Service in Entra ID (Azure AD) and set the App ID URI (e.g., api://<webapp-name>)
+# 2. Assign the APIM managed identity as an app role or grant it API permissions to the App Service
+# 3. In APIM, use the managed identity to acquire a token for the App ID URI and add it to the Authorization header for backend calls
+#
+# See: https://learn.microsoft.com/en-us/azure/app-service/configure-authentication-provider-aad
+#      https://learn.microsoft.com/en-us/azure/api-management/api-management-howto-protect-backend-with-aad

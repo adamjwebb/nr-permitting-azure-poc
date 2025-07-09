@@ -77,23 +77,26 @@ module "privateEndpoint_nsg" {
   security_rules      = local.privateEndpoint_nsg_security_rules
 }
 
-/* resource "azurerm_route_table" "apim_route_table" {
+module "apim_route_table" {
+  source  = "Azure/avm-res-network-routetable/azurerm"
+  version = "0.4.1"
+
   name                = "${local.abbrs.networkRouteTables}apim-${random_id.random_deployment_suffix.hex}"
   location            = data.azurerm_resource_group.rg.location
   resource_group_name = data.azurerm_resource_group.rg.name
-
-  route {
-    name                   = "ApimMgmtEndpointToApimServiceTag"
-    address_prefix         = "ApiManagement"
-    next_hop_type          = "Internet"
-  }
-
-  route {
+  routes = {
+    ApimMgmtEndpointToApimServiceTag = {
+        name                   = "ApimMgmtEndpointToApimServiceTag"
+        address_prefix         = "ApiManagement"
+        next_hop_type          = "Internet"
+      }
+      ApimToInternet = {
     name                   = "ApimToInternet"
     address_prefix         = "0.0.0.0/0"
     next_hop_type          = "Internet"
   }
-      lifecycle {
-    ignore_changes = [tags]
   }
-} */
+  subnet_resource_ids = {
+    apimSubnet = module.apim_subnet.resource_id
+  }
+}

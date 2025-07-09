@@ -1,12 +1,7 @@
 terraform {
   required_version = ">= 1.9.0"
 
-  backend "azurerm" {
-    resource_group_name  = var.terraform_state_rg
-    storage_account_name = var.terraform_state_storage
-    container_name       = var.terraform_state_container
-    key                  = "${var.environment}.tfstate"
-  }
+  
 
   required_providers {
     azurerm = {
@@ -25,7 +20,8 @@ terraform {
 }
 provider "azurerm" {
   use_oidc  = true
-  tenant_id = var.tenant_id
-  client_id = var.client_id
+//  tenant_id = var.tenant_id
+//  client_id = var.client_id
   features {}
+  subscription_id = var.subscription_id
 }
