@@ -4,6 +4,8 @@ include {
 
 locals {
   app_env = get_env("app_env")
+  vnet_resource_group_name = get_env("vnet_resource_group_name") # this is the resource group where the VNet exists and initial setup was done.
+
 }
 
 # Include the common terragrunt configuration for all modules
