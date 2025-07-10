@@ -12,7 +12,7 @@ generate "tools_tfvars" {
   if_exists         = "overwrite"
   disable_signature = true  
   contents          = <<-EOF
-    resource_group_name = "rg-quickstart-containers-tools"
+    resource_group_name = "${local.vnet_resource_group_name}"
     location = "Canada Central"
 EOF
 }
