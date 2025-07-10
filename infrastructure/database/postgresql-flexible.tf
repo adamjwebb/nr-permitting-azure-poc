@@ -23,7 +23,7 @@ data "azurerm_subnet" "private_endpoints" {
 # PostgreSQL Flexible Server
 resource "azurerm_postgresql_flexible_server" "main" {
   name                = "${var.app_name}"
-  resource_group_name = data.azurerm_resource_group.main.name.name
+  resource_group_name = data.azurerm_resource_group.main.name
   location            = var.location
 
   administrator_login    = var.postgresql_admin_username
@@ -74,7 +74,7 @@ resource "azurerm_postgresql_flexible_server_database" "main" {
 resource "azurerm_private_endpoint" "postgresql" {
   name                = "${var.app_name}-pe"
   location            = var.location
-  resource_group_name = data.azurerm_resource_group.main.name.name
+  resource_group_name = data.azurerm_resource_group.main.name
   subnet_id           = data.azurerm_subnet.private_endpoints.id
 
   private_service_connection {
