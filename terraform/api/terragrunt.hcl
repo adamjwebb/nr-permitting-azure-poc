@@ -9,7 +9,7 @@ locals {
   stack_prefix            = get_env("stack_prefix")
   vnet_resource_group_name = get_env("vnet_resource_group_name") # this is the resource group where the VNet exists and initial setup was done.
   vnet_name              = get_env("vnet_name") # this is the name of the existing VNet
-  storage_account_name    = "tfstatequickstartazureco"
+  storage_account_name    = "tfstatenrpermittingazure"
   target_env              = get_env("target_env") # this is the target environment, like dev, test, prod
   azure_subscription_id   = get_env("azure_subscription_id")
   azure_tenant_id         = get_env("azure_tenant_id")
