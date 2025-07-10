@@ -1,98 +1,83 @@
-# Integration using Azure Service Bus and API Management
+[![Merge](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/merge.yml/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/merge.yml)
+[![PR](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pr-open.yml/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pr-open.yml)
+[![PR Validate](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pr-validate.yml/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pr-validate.yml)
+[![CodeQL](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/github-code-scanning/codeql)
+[![Pause Azure Resources](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pause-resources.yml/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/pause-resources.yml)
+[![Resume Azure Resources](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/resume-resources.yml/badge.svg)](https://github.com/bcgov/quickstart-azure-containers/actions/workflows/resume-resources.yml)
+# Quickstart for Azure Landing Zone Container Deployments
 
-This is a sample integration app template that walks through setting up API Management policy for sending data to Azure Service Bus. The API Management uses Managed Identity to access the Service Bus REST APIs. A Function is triggered when a message is queued in Service Bus, and it will write message data to Cosmos DB. The Function App uses Managed Identity to get access to Service Bus. This is a typical integration scenario leveraging APIs.
+A secure, compliant infrastructure template for deploying containerized applications to Azure Landing Zone environments. This template follows all Azure Landing Zone security guardrails and best practices for B.C. government cloud deployments.
 
-> Refer to the [App Templates](https://github.com/microsoft/App-Templates) repo Readme for more samples that are compatible with [Azure Developer CLI (azd)](https://github.com/Azure/azure-dev/)
+## 🛡️ Azure Landing Zone Compliance
 
-## Architecture
-Below architecture is deployed in this demonstration.
+This template is specifically designed for Azure Landing Zone environments and includes:
 
-![Integration Architecture](media/s8.png)
+- ✅ **No Public IPs** - All resources use private endpoints and internal networking
+- ✅ **Private Endpoints** - PostgreSQL, Storage, and Container Registry accessible only privately  
+- ✅ **Centralized DNS** - Uses Landing Zone managed Private DNS zones
+- ✅ **HTTPS/TLS 1.2** - Enforced across all services
+- ✅ **WAF Protection** - Web Application Firewall in Prevention mode
+- ✅ **Key Vault Security** - Soft delete, purge protection, and network restrictions
+- ✅ **Network Isolation** - All traffic through approved subnets and firewalls
+- ✅ **Canada Regions Only** - Deploys to Canada Central/East as required
+- ✅ **RBAC Authorization** - Role-based access control throughout
+- ✅ **Audit Logging** - Comprehensive logging and monitoring
 
-Azure Services used:
-
-1. API Management
-1. Service Bus
-1. Function App
-1. Application Insights (Function Execution)
-1. Storage Account
-1. Cosmos DB
-
-The client can be simulated using curl, or any other tool that can send HTTP request to APIM gateway.
-
-## Benefits of this Architecture
-
-Below are benefits and potential extension scenarios for this architecture.
-
-1. Integrate backend systems using message broker to decouple services for scalability and reliability. 
-1. Allows work to be queued when backend systems are unavailable.
-1. API Management provides the publishing capability for HTTP APIs, to promote reuse and discoverability. It can manage other cross-cutting concerns such as authentication, throughput limits, and response caching.
-1. Provide load leveling to handle bursts in workloads and broadcast messages to multiple consumers.
-
-In the above architecture, Azure Function App processes the messages by simply writing the data to the Cosmos DB. 
-Other potential extensions of this architecture are:
-
-1. The function can be converted to a durable function that orchestrates normalization and correlation of data prior to persisting to the Cosmos DB or persisting to other storage.
-1. Instead of a Function App, other consumers can process the messages in Service Bus. Services such as Logic Apps to orchestrate workflows, or Microservices running in Container Apps/AKS to process the workload.
-1. An Azure EventGrid could be integrated with Service Bus for cost optimization in cases where messages are received occasionally.
-1. The APIM can be configured to expose other synchronous REST APIs.
-1. The Service bus could be replaced by other queueing technology such as EventHub and EventGrid.
-
-## Deploy solution to Azure
+## 🚀 Quick Start
 
 ### Prerequisites
-
-1. Local bash shell with Azure CLI or [Azure Cloud Shell](https://ms.portal.azure.com/#cloudshell/)
-1. Azure Subscription. [Create one for free](https://azure.microsoft.com/en-us/free/).
-1. Clone or fork of this repository.
+1. Access to an Azure Landing Zone Project Set subscription
+2. VNet and subnets provisioned by your Landing Zone team
+3. Security group membership (Reader/Contributor/Owner)
+4. Terraform state storage account and container
 
 ### Deploy
+```powershell
+# Clone and navigate to project
+git clone https://github.com/bcgov/quickstart-azure-containers.git
+cd quickstart-azure-containers
 
-Login to your Azure in your terminal.
-
-```bash
-az login
+# Deploy infrastructure (adjust parameters for your environment)
+.\deploy.ps1 `
+  -SubscriptionId "12345678-1234-1234-1234-123456789abc" `
+  -ResourceGroup "rg-tfstate-central" `
+  -StorageAccount "tfstatecentral" `
+  -Container "tfstate" `
+  -Environment "dev" `
+  -Command "apply"
 ```
 
-To check your subscription.
+## 📖 Documentation
 
-```bash
-az account show
+- **[Azure Landing Zone Deployment Guide](AZURE_LANDING_ZONE_GUIDE.md)** - Complete deployment instructions
+- **[Compliance Checklist](AZURE_LANDING_ZONE_CHECKLIST.md)** - Pre and post-deployment validation
+- **[Sample Configuration](terraform/SAMPLE_TERRAGRUNT_CONFIG.hcl)** - Example terragrunt configuration
+
+## 🏗️ Architecture
+
+The template deploys a three-tier application architecture:
+
+1. **Database Tier**: Azure PostgreSQL Flexible Server with private endpoint
+2. **API Tier**: Azure Container Apps with internal load balancer  
+3. **Frontend Tier**: Static web app on Azure Storage with Front Door CDN
+
+All components communicate through private networks and follow Azure Landing Zone security patterns.
+
+## 🔧 Customization
+
+Update the terragrunt configurations in `terraform/{module}/{environment}/terragrunt.hcl` with your specific Landing Zone resource names:
+
+```hcl
+# VNet configuration (existing Landing Zone resources)
+vnet_name = "vnet-landingzone-dev"
+vnet_resource_group_name = "rg-networking-dev"
+database_subnet_name = "subnet-database-dev"
+container_apps_subnet_name = "subnet-container-apps-dev"
+private_endpoints_subnet_name = "subnet-private-endpoints-dev"
+
+# Centralized DNS
+centralized_dns_resource_group_name = "rg-dns-central"
 ```
 
-Run the deployment. The deployment will create the resource group "rg-\<Name suffix for resources\>". Make sure you are in the 'app-templates-integration-services' directory.
-
-```bash
-cd app-templates-integration-services
-
-az deployment sub create --name "<unique deployment name>" --location "<Your Chosen Location>" --template-file infra/main.bicep --parameters name="<Name suffix for resources>" publisherEmail="<Publisher Email for APIM>" publisherName="<Publisher Name for APIM>" 
-```
-
-The following deployments will run:
-
-![deployment times](media/s9.png)
-
->**NOTE**: The APIM deployment can take over an hour to complete.
-
-## Validate Deployment
-
-1. Use Curl or another tool to send a request as shown below to the "demo-queue" created during deployment. Make sure to send in the API key in the header "Ocp-Apim-Subscription-Key".
-
-    ```bash
-    curl -X POST https://<Your APIM Gateway URL>/sb-operations/demo-queue -H 'Ocp-Apim-Subscription-Key:<Your APIM Subscription Key>' -H 'Content-Type: application/json' -d '{ "date" : "2022-09-17", "id" : "1", "data" : "Sending data via APIM->Service Bus->Function->CosmosDB" }'
-    ```
-    If using PowerShell use Invoke-WebRequest:
-
-    ```
-    Invoke-WebRequest -Uri "https://<Your APIM Gateway URL>/sb-operations/demo-queue" -Headers @{'Ocp-Apim-Subscription-Key' = '<Your APIM Subscription Key>'; 'Content-Type' = 'application/json'} -Method 'POST' -Body '{ "date" : "2022-09-17", "id" : "1", "data" : "Sending data via APIM->Service Bus->Function->CosmosDB" }'
-    ```
-
-1. Go to your deployment of Cosmos DB in Azure Portal, click on Data Explorer, select "demo-database" and the "demo-container”, click Items. Select the first item and view the content. It will match the data submitted to the APIM gateway in step 1.
-    
-    ![Data in Cosmos DB](media/s10.png)
-
-## Disclaimer
-
-The code and deployment biceps are for demonstration purposes only.
-
+Contact your Landing Zone team for the correct resource names and configurations.
 
