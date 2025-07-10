@@ -2,6 +2,10 @@
 
 data "azurerm_client_config" "current" {}
 
+data "azurerm_resource_group" "main" {
+  name     = var.resource_group_name
+}
+
 # Data source for existing virtual network, which is created as part of Initial Setup
 data "azurerm_virtual_network" "main" {
   name                = var.vnet_name
@@ -19,7 +23,7 @@ data "azurerm_subnet" "private_endpoints" {
 # PostgreSQL Flexible Server
 resource "azurerm_postgresql_flexible_server" "main" {
   name                = "${var.app_name}"
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = data.azurerm_resource_group.main.name.name
   location            = var.location
 
   administrator_login    = var.postgresql_admin_username
@@ -70,7 +74,7 @@ resource "azurerm_postgresql_flexible_server_database" "main" {
 resource "azurerm_private_endpoint" "postgresql" {
   name                = "${var.app_name}-pe"
   location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  resource_group_name = data.azurerm_resource_group.main.name.name
   subnet_id           = data.azurerm_subnet.private_endpoints.id
 
   private_service_connection {
@@ -139,9 +143,9 @@ resource "azurerm_postgresql_flexible_server_configuration" "azure_extensions" {
   ]
 }
 
-# Create the main resource group for all application resources
-resource "azurerm_resource_group" "main" {
+# Create the main resource group for all application resources - NOT NEEDED AS RESOURCE GROUP ALREADY EXISTS
+/* resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
   tags     = var.common_tags
-}
+} */

@@ -2,6 +2,10 @@
 
 data "azurerm_client_config" "current" {}
 
+data "azurerm_resource_group" "api" {
+  name = var.resource_group_name
+}
+
 # Data source for existing virtual network
 data "azurerm_virtual_network" "main" {
   name                = var.vnet_name
@@ -27,8 +31,8 @@ data "azurerm_subnet" "web" {
   resource_group_name  = var.vnet_resource_group_name
 }
 
-# Resource group for API resources
-resource "azurerm_resource_group" "api" {
+# Resource group for API resources - NOT NEEDED AS RESOURCE GROUP ALREADY EXISTS
+/* resource "azurerm_resource_group" "api" {
   name     = var.resource_group_name
   location = var.location
   tags     = var.common_tags
@@ -38,31 +42,31 @@ resource "azurerm_resource_group" "api" {
       tags
     ]
   }
-}
+} */
 
 # Container Apps Environment v2 with workload profiles and VNet integration
 resource "azurerm_container_app_environment" "main" {
   infrastructure_resource_group_name = "ME_${var.app_name}-containerapp"
-  name                           = "${var.app_name}-containerapp"
-  location                       = var.location
-  resource_group_name            = azurerm_resource_group.api.name
-  infrastructure_subnet_id       = data.azurerm_subnet.container_apps.id
-  internal_load_balancer_enabled = true
+  name                               = "${var.app_name}-containerapp"
+  location                           = var.location
+  resource_group_name                = data.azurerm_resource_group.api.name
+  infrastructure_subnet_id           = data.azurerm_subnet.container_apps.id
+  internal_load_balancer_enabled     = true
 
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
 
   # Workload profiles for v2 Container Apps Environment
   # This allows /27 subnet size instead of /23 required by consumption plan
   workload_profile {
-    maximum_count = var.max_replicas
-    minimum_count = var.min_replicas
+    maximum_count         = var.max_replicas
+    minimum_count         = var.min_replicas
     name                  = "Consumption"
     workload_profile_type = "Consumption"
   }
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -73,13 +77,13 @@ resource "azurerm_container_app_environment" "main" {
 resource "azurerm_log_analytics_workspace" "main" {
   name                = "${var.app_name}-logs"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   sku                 = "PerGB2018"
   retention_in_days   = 30
-  
+
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -90,13 +94,13 @@ resource "azurerm_log_analytics_workspace" "main" {
 resource "azurerm_application_insights" "main" {
   name                = "${var.app_name}-appinsights"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   application_type    = "other"
   workspace_id        = azurerm_log_analytics_workspace.main.id
-  
+
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -107,7 +111,7 @@ resource "azurerm_application_insights" "main" {
 resource "azurerm_user_assigned_identity" "container_apps" {
   name                = "${var.app_name}-containerapp-identity"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
 
   tags = var.common_tags
 }
@@ -116,16 +120,16 @@ resource "azurerm_user_assigned_identity" "container_apps" {
 resource "azurerm_container_registry" "main" {
   count               = var.create_container_registry ? 1 : 0
   name                = "${replace(var.app_name, "-", "")}acr"
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   location            = var.location
   sku                 = "Premium"
   admin_enabled       = false
 
   # Azure Landing Zone security requirements
   public_network_access_enabled = false
-  tags = var.common_tags
+  tags                          = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -144,8 +148,8 @@ resource "azurerm_role_assignment" "acr_pull" {
 resource "azurerm_container_app" "api" {
   name                         = "${var.app_name}-api"
   container_app_environment_id = azurerm_container_app_environment.main.id
-  resource_group_name          = azurerm_resource_group.api.name
-  revision_mode               = "Single"
+  resource_group_name          = data.azurerm_resource_group.api.name
+  revision_mode                = "Single"
 
   # Add explicit dependency to ensure proper order
   depends_on = [
@@ -156,7 +160,7 @@ resource "azurerm_container_app" "api" {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.container_apps.id]
   }
-  
+
   template {
     min_replicas = var.min_replicas
     max_replicas = var.max_replicas
@@ -268,10 +272,10 @@ resource "azurerm_container_app" "api" {
     dynamic "container" {
       for_each = var.enable_psql_sidecar ? [1] : []
       content {
-        name   = "${var.app_name}-psql-client"
-        image  = "ghcr.io/bcgov/nr-containers/alpine:3.22"
-        cpu    = "0.25"
-        memory = "0.5Gi"
+        name    = "${var.app_name}-psql-client"
+        image   = "ghcr.io/bcgov/nr-containers/alpine:3.22"
+        cpu     = "0.25"
+        memory  = "0.5Gi"
         command = ["/bin/sh"]
         args    = ["-c", "echo 'PostgreSQL sidecar started. Keeping container alive...'; while true; do sleep 360000; done"]
 
@@ -326,8 +330,8 @@ resource "azurerm_container_app" "api" {
 
   ingress {
     allow_insecure_connections = false
-    external_enabled          = false
-    target_port               = 3000
+    external_enabled           = false
+    target_port                = 3000
 
     traffic_weight {
       percentage      = 100
@@ -337,7 +341,7 @@ resource "azurerm_container_app" "api" {
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -348,14 +352,14 @@ resource "azurerm_container_app" "api" {
 resource "azurerm_public_ip" "app_gateway" {
   name                = "qaca-api-tools-gw"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   allocation_method   = "Static"
   sku                 = "Standard"
   zones               = ["1", "2", "3"]
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -365,14 +369,14 @@ resource "azurerm_public_ip" "app_gateway" {
 # WAF Policy for Application Gateway
 resource "azurerm_web_application_firewall_policy" "main" {
   name                = "${var.app_name}-waf-policy"
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   location            = var.location
 
   policy_settings {
     enabled                     = true
-    mode                       = "Prevention"
-    request_body_check         = true
-    file_upload_limit_in_mb    = 100
+    mode                        = "Prevention"
+    request_body_check          = true
+    file_upload_limit_in_mb     = 100
     max_request_body_size_in_kb = 128
   }
 
@@ -389,7 +393,7 @@ resource "azurerm_web_application_firewall_policy" "main" {
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -400,14 +404,14 @@ resource "azurerm_web_application_firewall_policy" "main" {
 resource "azurerm_key_vault" "app_gateway" {
   name                = "${replace(var.app_name, "-", "")}appgwkv"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   tenant_id           = data.azurerm_client_config.current.tenant_id
   sku_name            = "standard"
 
   # Landing Zone compliance - restrict public access via network ACLs
   # Use private endpoint only for Key Vault access
   public_network_access_enabled = false
-  
+
   # Enable for template deployment to allow Application Gateway access
   enabled_for_deployment          = false
   enabled_for_disk_encryption     = false
@@ -422,7 +426,7 @@ resource "azurerm_key_vault" "app_gateway" {
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -433,7 +437,7 @@ resource "azurerm_key_vault" "app_gateway" {
 resource "azurerm_private_endpoint" "key_vault" {
   name                = "${var.app_name}-kv-pe"
   location            = var.location
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   subnet_id           = data.azurerm_subnet.private_endpoint.id
 
   private_service_connection {
@@ -445,7 +449,7 @@ resource "azurerm_private_endpoint" "key_vault" {
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags
     ]
@@ -500,7 +504,7 @@ resource "azurerm_key_vault_certificate" "app_gateway" {
 
     x509_certificate_properties {
       # Update this with your actual domain
-      subject            = "CN=${var.ssl_certificate_domain}"
+      subject = "CN=${var.ssl_certificate_domain}"
       # Policy compliance - set expiration date (12 months max)
       validity_in_months = 12
 
@@ -535,7 +539,7 @@ resource "azurerm_key_vault_certificate" "app_gateway" {
 # Application Gateway v2 with WAF
 resource "azurerm_application_gateway" "main" {
   name                = "${var.app_name}-appgw"
-  resource_group_name = azurerm_resource_group.api.name
+  resource_group_name = data.azurerm_resource_group.api.name
   location            = var.location
 
   sku {
@@ -572,12 +576,12 @@ resource "azurerm_application_gateway" "main" {
   }
 
   backend_http_settings {
-    name                  = "${var.app_name}-containerapp-backend-http-settings"
-    cookie_based_affinity = "Disabled"
-    path                  = "/"
-    port                  = 443
-    protocol              = "Https"
-    request_timeout       = 60
+    name                                = "${var.app_name}-containerapp-backend-http-settings"
+    cookie_based_affinity               = "Disabled"
+    path                                = "/"
+    port                                = 443
+    protocol                            = "Https"
+    request_timeout                     = 60
     pick_host_name_from_backend_address = true
 
     probe_name = "${var.app_name}-containerapp-health-probe"
@@ -619,11 +623,11 @@ resource "azurerm_application_gateway" "main" {
   }
 
   request_routing_rule {
-    name                       = "http-to-https-redirect"
-    rule_type                  = "Basic"
-    http_listener_name         = "${var.app_name}-appGwHttpListener"
+    name                        = "http-to-https-redirect"
+    rule_type                   = "Basic"
+    http_listener_name          = "${var.app_name}-appGwHttpListener"
     redirect_configuration_name = "http-to-https-redirect-config"
-    priority                   = 100
+    priority                    = 100
   }
 
   request_routing_rule {
@@ -659,7 +663,7 @@ resource "azurerm_application_gateway" "main" {
 
   tags = var.common_tags
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       # Ignore tags to allow management via Azure Policy
       tags,
       # Ignore SSL certificate to allow for Azure managed certificate updates
